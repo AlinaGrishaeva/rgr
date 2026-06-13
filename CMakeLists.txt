@@ -10,6 +10,7 @@ add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 add_executable(cryptum
     src/main.cpp
     src/args_parser.cpp
+    src/file_utils.cpp
 )
 
 target_include_directories(cryptum PRIVATE src)
