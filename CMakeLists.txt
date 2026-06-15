@@ -15,3 +15,13 @@ add_executable(cryptum
 )
 
 target_include_directories(cryptum PRIVATE src)
+
+add_library(caesar SHARED
+    algorithms/caesar/caesar.cpp
+)
+
+target_include_directories(caesar PRIVATE src)
+
+set_target_properties(caesar PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+)
