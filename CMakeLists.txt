@@ -12,9 +12,14 @@ add_executable(cryptum
     src/args_parser.cpp
     src/file_utils.cpp
     src/secure_memory.cpp
+    src/library_loader.cpp
 )
 
 target_include_directories(cryptum PRIVATE src)
+
+if(UNIX)
+    target_link_libraries(cryptum PRIVATE dl)
+endif()
 
 add_library(caesar SHARED
     algorithms/caesar/caesar.cpp
