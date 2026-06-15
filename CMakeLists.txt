@@ -25,3 +25,13 @@ target_include_directories(caesar PRIVATE src)
 set_target_properties(caesar PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )
+
+add_library(code_word SHARED
+    algorithms/code_word/code_word.cpp
+)
+
+target_include_directories(code_word PRIVATE src)
+
+set_target_properties(code_word PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+)
