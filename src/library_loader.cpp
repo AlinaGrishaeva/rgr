@@ -163,3 +163,14 @@ bool load_algorithm_library(const string& algorithm_name, LoadedAlgorithm& algor
     algorithm.algorithm_name = algorithm_info->algorithm_name;
     return true;
 }
+void unload_algorithm_library(LoadedAlgorithm& algorithm)
+{
+    close_library(algorithm.library_handle);
+
+    algorithm.library_handle = nullptr;
+    algorithm.algorithm_name.clear();
+    algorithm.get_algorithm_info = nullptr;
+    algorithm.get_output_size = nullptr;
+    algorithm.encrypt = nullptr;
+    algorithm.decrypt = nullptr;
+}

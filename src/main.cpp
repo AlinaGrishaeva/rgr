@@ -1,4 +1,5 @@
 #include "args_parser.h"
+#include "library_loader.h"
 
 #include <exception>
 #include <iostream>
@@ -26,8 +27,8 @@ void print_help()
     cout << "  -w, --write-key         Write generated key to standard output\n\n";
 
     cout << "Supported algorithms:\n";
-    cout << "  caesar\n";
-    cout << "  code_word\n";
+    cout << "  caesar       - Caesar cipher\n";
+    cout << "  code_word    - code word cipher\n";
 }
 
 int main(int argc, char* argv[])
@@ -49,11 +50,24 @@ int main(int argc, char* argv[])
             return 1;
         }
 
-        cout << "Arguments are correct.\n";
-        cout << "Selected algorithm: " << result.options.algorithm << '\n';
+        LoadedAlgorithm algorithm;
+        string error_message;
+
+        if (!load_algorithm_library(result.options.algorithm, algorithm, error_message))
+        {
+            cerr << "Error: " << error_message << '\n';
+            return 1;
+        }
+
+        const AlgorithmInfo* algorithm_info = algorithm.get_algorithm_info();
+
+        cout << "Algorithm library loaded.\n";
+        cout << "Selected algorithm: " << algorithm_info->algorithm_name << '\n';
+        cout << "Key size: " << algorithm_info->key_size << " byte(s)\n";
         cout << "Selected mode: " << result.options.mode << '\n';
         cout << "This mode will be implemented in the next steps.\n";
 
+        unload_algorithm_library(algorithm);
         return 0;
     }
     catch (const exception& error)
