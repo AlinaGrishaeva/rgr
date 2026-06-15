@@ -27,7 +27,7 @@ void print_help()
 
     cout << "Supported algorithms:\n";
     cout << "  caesar\n";
-    cout << "  xor_cipher\n";
+    cout << "  code_word\n";
 }
 
 int main(int argc, char* argv[])
