@@ -79,6 +79,110 @@ int run_generate_key_mode(const ProgramOptions& options, const AlgorithmInfo* al
     return 0;
 }
 
+int get_operation_type(const string& mode)
+{
+    if (mode == "encrypt")
+    {
+        return OPERATION_ENCRYPT;
+    }
+
+    return OPERATION_DECRYPT;
+}
+
+CryptFunc get_crypt_function(const LoadedAlgorithm& algorithm, const string& mode)
+{
+    if (mode == "encrypt")
+    {
+        return algorithm.encrypt;
+    }
+
+    return algorithm.decrypt;
+}
+
+bool are_crypt_files_specified(const ProgramOptions& options)
+{
+    return !options.key_file.empty() &&
+           !options.input_file.empty() &&
+           !options.output_file.empty();
+}
+
+int run_crypt_mode(const ProgramOptions& options, const LoadedAlgorithm& algorithm, const AlgorithmInfo* algorithm_info)
+{
+    if (!are_crypt_files_specified(options))
+    {
+        cerr << "Error: key, input and output files must be specified\n";
+        return 1;
+    }
+
+    string error_message;
+
+    vector<uint8_t> key = read_binary_file(options.key_file, error_message);
+
+    if (key.empty())
+    {
+        cerr << "Error: " << error_message << '\n';
+        return 1;
+    }
+
+    if (key.size() != algorithm_info->key_size)
+    {
+        secure_clear_vector(key);
+        cerr << "Error: incorrect key size\n";
+        return 1;
+    }
+
+    vector<uint8_t> input_data = read_binary_file(options.input_file, error_message);
+
+    if (!error_message.empty())
+    {
+        secure_clear_vector(key);
+	cerr << "Error: " << error_message << '\n';
+        return 1;
+    }
+
+    int operation_type = get_operation_type(options.mode);
+    size_t output_size = algorithm.get_output_size(input_data.size(), operation_type);
+
+    vector<uint8_t> output_data(output_size);
+
+    ConstBuffer key_buffer = {key.data(), key.size()};
+    ConstBuffer input_buffer = {input_data.data(), input_data.size()};
+    MutBuffer output_buffer = {output_data.data(), output_data.size()};
+
+    CryptFunc crypt_function = get_crypt_function(algorithm, options.mode);
+    int crypt_result = crypt_function(key_buffer, input_buffer, &output_buffer);
+
+    if (crypt_result != 0)
+    {
+        secure_clear_vector(key);
+        secure_clear_vector(input_data);
+        secure_clear_vector(output_data);
+        cerr << "Error: cryptographic operation failed\n";
+        return 1;
+    }
+
+    output_data.resize(output_buffer.size);
+
+    if (!write_binary_file(options.output_file, output_data, error_message))
+    {
+        secure_clear_vector(key);
+        secure_clear_vector(input_data);
+        secure_clear_vector(output_data);
+        cerr << "Error: " << error_message << '\n';
+        return 1;
+    }
+
+    secure_clear_vector(key);
+    secure_clear_vector(input_data);
+    secure_clear_vector(output_data);
+
+    cout << "Operation completed successfully.\n";
+    cout << "Algorithm: " << algorithm_info->algorithm_name << '\n';
+    cout << "Mode: " << options.mode << '\n';
+
+    return 0;
+}
+
 int main(int argc, char* argv[])
 {
     try
@@ -116,13 +220,9 @@ int main(int argc, char* argv[])
             return result_code;
         }
 
-        cout << "Algorithm library loaded.\n";
-        cout << "Selected algorithm: " << algorithm_info->algorithm_name << '\n';
-        cout << "Key size: " << algorithm_info->key_size << " byte(s)\n";
-        cout << "Selected mode: " << result.options.mode << '\n';
-        cout << "This mode will be implemented in the next steps.\n";
-	unload_algorithm_library(algorithm);
-        return 0;
+        int result_code = run_crypt_mode(result.options, algorithm, algorithm_info);
+        unload_algorithm_library(algorithm);
+        return result_code;
     }
     catch (const exception& error)
     {
