@@ -1,8 +1,12 @@
 #include "args_parser.h"
+#include "file_utils.h"
+#include "key_utils.h"
 #include "library_loader.h"
+#include "secure_memory.h"
 
 #include <exception>
 #include <iostream>
+#include <vector>
 
 using namespace std;
 
@@ -29,6 +33,50 @@ void print_help()
     cout << "Supported algorithms:\n";
     cout << "  caesar       - Caesar cipher\n";
     cout << "  code_word    - code word cipher\n";
+}
+
+int run_generate_key_mode(const ProgramOptions& options, const AlgorithmInfo* algorithm_info)
+{
+    if (!options.save_key_file.empty() && options.write_key)
+    {
+        cerr << "Error: choose only one key output method\n";
+        return 1;
+    }
+
+    string error_message;
+    vector<uint8_t> key = generate_key(algorithm_info->key_size, error_message);
+
+    if (key.empty())
+    {
+        cerr << "Error: " << error_message << '\n';
+        return 1;
+    }
+
+    if (!options.save_key_file.empty())
+    {
+        if (!write_binary_file(options.save_key_file, key, error_message))
+        {
+            secure_clear_vector(key);
+            cerr << "Error: " << error_message << '\n';
+            return 1;
+        }
+
+        cout << "Key generated successfully.\n";
+        cout << "Algorithm: " << algorithm_info->algorithm_name << '\n';
+        cout << "Key size: " << algorithm_info->key_size << " byte(s)\n";
+    }
+    else if (options.write_key)
+    {
+        if (!write_binary_block(cout, key, error_message))
+        {
+            secure_clear_vector(key);
+            cerr << "Error: " << error_message << '\n';
+            return 1;
+        }
+    }
+
+    secure_clear_vector(key);
+    return 0;
 }
 
 int main(int argc, char* argv[])
@@ -61,13 +109,19 @@ int main(int argc, char* argv[])
 
         const AlgorithmInfo* algorithm_info = algorithm.get_algorithm_info();
 
+        if (result.options.mode == "generate-key")
+        {
+            int result_code = run_generate_key_mode(result.options, algorithm_info);
+            unload_algorithm_library(algorithm);
+            return result_code;
+        }
+
         cout << "Algorithm library loaded.\n";
         cout << "Selected algorithm: " << algorithm_info->algorithm_name << '\n';
         cout << "Key size: " << algorithm_info->key_size << " byte(s)\n";
         cout << "Selected mode: " << result.options.mode << '\n';
         cout << "This mode will be implemented in the next steps.\n";
-
-        unload_algorithm_library(algorithm);
+	unload_algorithm_library(algorithm);
         return 0;
     }
     catch (const exception& error)

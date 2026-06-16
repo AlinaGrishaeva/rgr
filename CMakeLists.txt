@@ -13,6 +13,7 @@ add_executable(cryptum
     src/file_utils.cpp
     src/secure_memory.cpp
     src/library_loader.cpp
+    src/key_utils.cpp
 )
 
 target_include_directories(cryptum PRIVATE src)
