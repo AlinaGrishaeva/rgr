@@ -17,6 +17,7 @@ void print_help()
     cout << "  cryptum --help\n";
     cout << "  cryptum -a <algorithm> -m generate-key -s <key_file>\n";
     cout << "  cryptum -a <algorithm> -m encrypt -k <key_file> -i <input_file> -o <output_file>\n";
+    cout << "  cryptum -a <algorithm> -m encrypt -g -s <key_file> -i <input_file> -o <output_file>\n";
     cout << "  cryptum -a <algorithm> -m decrypt -k <key_file> -i <input_file> -o <output_file>\n\n";
 
     cout << "Options:\n";
@@ -101,22 +102,63 @@ CryptFunc get_crypt_function(const LoadedAlgorithm& algorithm, const string& mod
 
 bool are_crypt_files_specified(const ProgramOptions& options)
 {
-    return !options.key_file.empty() &&
-           !options.input_file.empty() &&
-           !options.output_file.empty();
+    return !options.input_file.empty() && !options.output_file.empty();
+}
+
+bool save_generated_key_if_needed(const ProgramOptions& options, const vector<uint8_t>& key, string& error_message)
+{
+    if (!options.save_key_file.empty())
+    {
+        return write_binary_file(options.save_key_file, key, error_message);
+    }
+
+    if (options.write_key)
+    {
+        return write_binary_block(cout, key, error_message);
+    }
+
+    return true;
+}
+
+vector<uint8_t> get_key_for_crypt_mode(const ProgramOptions& options, const AlgorithmInfo* algorithm_info, string& error_message)
+{
+    if (options.generate_key)
+    {
+        if (!options.key_file.empty())
+        {
+            error_message = "choose key file or key generation";
+            return {};
+        }
+
+        vector<uint8_t> key = generate_key(algorithm_info->key_size, error_message);
+	if (key.empty())
+        {
+            return {};
+        }
+
+        if (!save_generated_key_if_needed(options, key, error_message))
+        {
+            secure_clear_vector(key);
+            return {};
+        }
+
+        return key;
+    }
+
+    return read_binary_file(options.key_file, error_message);
 }
 
 int run_crypt_mode(const ProgramOptions& options, const LoadedAlgorithm& algorithm, const AlgorithmInfo* algorithm_info)
 {
     if (!are_crypt_files_specified(options))
     {
-        cerr << "Error: key, input and output files must be specified\n";
+        cerr << "Error: input and output files must be specified\n";
         return 1;
     }
 
     string error_message;
 
-    vector<uint8_t> key = read_binary_file(options.key_file, error_message);
+    vector<uint8_t> key = get_key_for_crypt_mode(options, algorithm_info, error_message);
 
     if (key.empty())
     {
@@ -136,7 +178,7 @@ int run_crypt_mode(const ProgramOptions& options, const LoadedAlgorithm& algorit
     if (!error_message.empty())
     {
         secure_clear_vector(key);
-	cerr << "Error: " << error_message << '\n';
+        cerr << "Error: " << error_message << '\n';
         return 1;
     }
 
