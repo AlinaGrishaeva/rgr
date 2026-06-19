@@ -24,8 +24,11 @@ extern "C" size_t get_output_size(size_t input_size, int operation_type)
 {
     (void)operation_type;
     
-    if (input_size % 2 != 0) {
-        return input_size + 1;
+    if (operation_type == OPERATION_ENCRYPT) {
+        if (input_size % 2 != 0) {
+            return input_size + 2;
+        }
+        return input_size;
     }
     
     return input_size;
@@ -43,12 +46,17 @@ bool is_buffer_correct(ConstBuffer key, ConstBuffer input, MutBuffer* output)
         return false;
     }
 
-    if (output == nullptr || output->size < input.size)
+    if (output == nullptr)
     {
         return false;
     }
 
     if (input.size > 0 && output->data == nullptr)
+    {
+        return false;
+    }
+
+    if (output->size < get_output_size(input.size, OPERATION_ENCRYPT))
     {
         return false;
     }
@@ -107,8 +115,11 @@ vector<uint8_t> double_encrypt(const vector<uint8_t>& data, const vector<uint8_t
     auto sq2 = make_square(k2);
     
     vector<uint8_t> filtered = data;
+    bool padded = false;
+    
     if (filtered.size() % 2 != 0) {
         filtered.push_back(0);
+        padded = true;
     }
     
     vector<uint8_t> result;
@@ -119,6 +130,11 @@ vector<uint8_t> double_encrypt(const vector<uint8_t>& data, const vector<uint8_t
         result.push_back(sq1[r1][c2]);
         result.push_back(sq2[r2][c1]);
     }
+    
+    if (padded) {
+        result.push_back(0xFF);
+    }
+    
     return result;
 }
 
@@ -127,17 +143,29 @@ vector<uint8_t> double_decrypt(const vector<uint8_t>& cipher, const vector<uint8
     auto sq1 = make_square(k1);
     auto sq2 = make_square(k2);
     
-    if (cipher.size() % 2 != 0) {
+    bool was_padded = false;
+    vector<uint8_t> data_to_decrypt = cipher;
+    
+    if (!data_to_decrypt.empty() && data_to_decrypt.back() == 0xFF) {
+        was_padded = true;
+        data_to_decrypt.pop_back();
+    }
+    
+    if (data_to_decrypt.size() % 2 != 0) {
         return {};
     }
     
     vector<uint8_t> result;
-    for (size_t i = 0; i < cipher.size(); i += 2) {
+    for (size_t i = 0; i < data_to_decrypt.size(); i += 2) {
         int r1, c1, r2, c2;
-        find_pos(sq1, cipher[i], r1, c1);
-        find_pos(sq2, cipher[i + 1], r2, c2);
+        find_pos(sq1, data_to_decrypt[i], r1, c1);
+        find_pos(sq2, data_to_decrypt[i + 1], r2, c2);
         result.push_back(sq1[r1][c2]);
         result.push_back(sq2[r2][c1]);
+    }
+    
+    if (was_padded && !result.empty()) {
+        result.pop_back();
     }
     
     return result;
