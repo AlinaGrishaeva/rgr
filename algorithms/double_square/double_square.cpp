@@ -142,35 +142,24 @@ vector<uint8_t> double_decrypt(const vector<uint8_t>& cipher, const vector<uint8
 {
     auto sq1 = make_square(k1);
     auto sq2 = make_square(k2);
-    
-    bool was_padded = false;
-    vector<uint8_t> data_to_decrypt = cipher;
-    
-    if (!data_to_decrypt.empty() && data_to_decrypt.back() == 0xFF) {
-        was_padded = true;
-        data_to_decrypt.pop_back();
-    }
-    
-    if (data_to_decrypt.size() % 2 != 0) {
+
+    if (cipher.size() % 2 != 0) {
         return {};
     }
-    
+
     vector<uint8_t> result;
-    for (size_t i = 0; i < data_to_decrypt.size(); i += 2) {
+    for (size_t i = 0; i < cipher.size(); i += 2) {
         int r1, c1, r2, c2;
-        find_pos(sq1, data_to_decrypt[i], r1, c1);
-        find_pos(sq2, data_to_decrypt[i + 1], r2, c2);
-        result.push_back(sq1[r1][c2]);
-        result.push_back(sq2[r2][c1]);
+
+        find_pos(sq1, cipher[i],     r1, c2);
+        find_pos(sq2, cipher[i + 1], r2, c1);
+
+        result.push_back(sq1[r1][c1]);
+        result.push_back(sq2[r2][c2]);
     }
-    
-    if (was_padded && !result.empty()) {
-        result.pop_back();
-    }
-    
+
     return result;
 }
-
 extern "C" int encrypt(ConstBuffer key, ConstBuffer input, MutBuffer* output)
 {
     try
