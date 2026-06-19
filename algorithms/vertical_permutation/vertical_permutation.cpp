@@ -57,9 +57,13 @@ vector<uint8_t> vertical_encrypt(const vector<uint8_t>& data, const vector<uint8
     int cols = key.size();
     int rows = (data.size() + cols - 1) / cols;
     
+    // Используем vector<uint8_t> вместо char
     vector<vector<uint8_t>> table(rows, vector<uint8_t>(cols, 0));
+    vector<vector<bool>> filled(rows, vector<bool>(cols, false));
+    
     for (size_t i = 0; i < data.size(); i++) {
         table[i / cols][i % cols] = data[i];
+        filled[i / cols][i % cols] = true;
     }
     
     vector<pair<uint8_t, int>> order;
@@ -72,7 +76,7 @@ vector<uint8_t> vertical_encrypt(const vector<uint8_t>& data, const vector<uint8
     for (auto& p : order) {
         int col = p.second;
         for (int row = 0; row < rows; row++) {
-            if (table[row][col] != 0) {
+            if (filled[row][col]) {
                 result.push_back(table[row][col]);
             }
         }
@@ -100,12 +104,15 @@ vector<uint8_t> vertical_decrypt(const vector<uint8_t>& data, const vector<uint8
     sort(order.begin(), order.end());
     
     vector<vector<uint8_t>> table(rows, vector<uint8_t>(cols, 0));
+    vector<vector<bool>> filled(rows, vector<bool>(cols, false));
+    
     size_t pos = 0;
     for (auto& p : order) {
         int col = p.second;
         for (int row = 0; row < col_lens[col]; row++) {
             if (pos < data.size()) {
                 table[row][col] = data[pos++];
+                filled[row][col] = true;
             }
         }
     }
@@ -113,7 +120,7 @@ vector<uint8_t> vertical_decrypt(const vector<uint8_t>& data, const vector<uint8
     vector<uint8_t> result;
     for (int row = 0; row < rows; row++) {
         for (int col = 0; col < cols; col++) {
-            if (table[row][col] != 0) {
+            if (filled[row][col]) {
                 result.push_back(table[row][col]);
             }
         }
