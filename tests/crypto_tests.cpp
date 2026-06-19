@@ -436,38 +436,38 @@ vector<TestCase> make_test_cases()
             "vertical_text",
             "vertical_permutation",
             str_to_bytes("Hello"),
-            str_to_bytes("KEY")
+            {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31}
         },
         {
             "vertical_binary",
             "vertical_permutation",
             {0, 1, 2, 3, 4, 5},
-            str_to_bytes("KEY")
+            {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31}
         },
         {
             "vertical_border_values",
             "vertical_permutation",
             {255, 128, 64, 32, 0},
-            str_to_bytes("KEY")
+            {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31}
         },
 
         {
             "double_square_text",
             "double_square",
             str_to_bytes("test"),
-            str_to_bytes("KEY1,KEY2")
+            {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31}
         },
         {
             "double_square_binary",
             "double_square",
             {10, 20, 30, 40, 50},
-            str_to_bytes("KEY1,KEY2")
+            {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31}
         },
         {
             "double_square_border_values",
             "double_square",
             {0, 255, 1, 254, 2, 253},
-            str_to_bytes("KEY1,KEY2")
+            {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31}
         }
     };
 
