@@ -209,7 +209,7 @@ uint16_t get_rotated_mask(uint16_t base_mask, int rotation)
     for (int r = 0; r < rotation; ++r)
     {
         uint16_t rotated = 0;
-        for (size_t = 0; i < TOTAL_CELLS; ++i)
+        for (size_t i = 0; i < TOTAL_CELLS; ++i)
         {
             if (mask & (1 << i))
             {
@@ -230,7 +230,7 @@ std::vector<int> get_hole_positions(uint16_t base_mask)
     {
         uint16_t mask = get_rotated_mask(base_mask, rotation);
         
-        for (size_t = 0; i < TOTAL_CELLS; ++i)
+        for (size_t i = 0; i < TOTAL_CELLS; ++i)
         {
             if (mask & (1 << i))
             {
