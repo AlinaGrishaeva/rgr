@@ -3,6 +3,8 @@
 echo "УСТАНОВКА CRYPTUM"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+INSTALL_DIR="/usr/local/lib/cryptum"
+LAUNCHER="/usr/local/bin/cryptum"
 
 cd "$ROOT_DIR"
 
@@ -11,36 +13,40 @@ mkdir -p build
 cd build
 
 cmake ..
-make -j$(nproc)
+make -j"$(nproc)"
 
-if [ $? -eq 0 ]; then
-    echo "Сборка выполнена успешно"
-else
+if [ $? -ne 0 ]; then
     echo "ОШИБКА: сборка не удалась"
     exit 1
 fi
 
-echo "Копирование исполняемого файла..."
-sudo cp cryptum /usr/local/bin/
+echo "Сборка выполнена успешно"
 
-if [ $? -eq 0 ]; then
-    echo "cryptum установлен в /usr/local/bin/"
-else
-    echo "ОШИБКА: не удалось скопировать файл"
+echo "Копирование файлов программы..."
+sudo mkdir -p "$INSTALL_DIR"
+
+sudo cp cryptum "$INSTALL_DIR/"
+sudo cp lib*.so "$INSTALL_DIR/"
+
+if [ $? -ne 0 ]; then
+    echo "ОШИБКА: не удалось скопировать файлы программы"
     exit 1
 fi
 
-echo "Копирование библиотек..."
-sudo mkdir -p /usr/local/lib/cryptum
-sudo cp lib*.so /usr/local/lib/cryptum/
+echo "Создание команды cryptum..."
+sudo tee "$LAUNCHER" > /dev/null <<EOF
+#!/bin/bash
+cd "$INSTALL_DIR"
+exec "$INSTALL_DIR/cryptum" "\$@"
+EOF
 
-if [ $? -eq 0 ]; then
-    echo "Библиотеки установлены в /usr/local/lib/cryptum/"
-else
-    echo "ОШИБКА: не удалось скопировать библиотеки"
+sudo chmod +x "$LAUNCHER"
+
+if [ $? -ne 0 ]; then
+    echo "ОШИБКА: не удалось создать команду cryptum"
     exit 1
 fi
 
 echo "УСТАНОВКА ЗАВЕРШЕНА"
 echo "Для запуска: cryptum --help"
-echo "Библиотеки находятся в: /usr/local/lib/cryptum/"
+echo "Файлы программы находятся в: $INSTALL_DIR"
