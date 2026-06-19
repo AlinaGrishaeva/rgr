@@ -37,6 +37,10 @@ void print_help()
     cout << "Supported algorithms:\n";
     cout << "  caesar       - Caesar cipher\n";
     cout << "  code_word    - code word cipher\n";
+    cout << "  cardano                - Cardano grille cipher\n";
+    cout << "  hill                   - Hill cipher\n";
+    cout << "  double_square          - double square cipher\n";
+    cout << "  vertical_permutation   - vertical permutation cipher\n";
 }
 
 bool is_standard_stream_name(const string& file_name)

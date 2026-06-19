@@ -18,7 +18,11 @@ struct SupportedAlgorithm
 
 const vector<SupportedAlgorithm> SUPPORTED_ALGORITHMS = {
     {"caesar", "caesar"},
-    {"code_word", "code_word"}
+    {"code_word", "code_word"},
+    {"cardano", "cardano"},
+    {"hill", "hill"},
+    {"double_square", "double_square"},
+    {"vertical_permutation", "vertical_permutation"}
 };
 
 bool is_algorithm_supported(const string& algorithm_name)
