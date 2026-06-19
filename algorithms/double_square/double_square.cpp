@@ -24,11 +24,8 @@ extern "C" size_t get_output_size(size_t input_size, int operation_type)
 {
     (void)operation_type;
     
-    if (operation_type == OPERATION_ENCRYPT) {
-        if (input_size % 2 != 0) {
-            return input_size + 2;
-        }
-        return input_size;
+    if (input_size % 2 != 0) {
+        return input_size + 1;
     }
     
     return input_size;
@@ -46,17 +43,12 @@ bool is_buffer_correct(ConstBuffer key, ConstBuffer input, MutBuffer* output)
         return false;
     }
 
-    if (output == nullptr)
+    if (output == nullptr || output->size < input.size)
     {
         return false;
     }
 
     if (input.size > 0 && output->data == nullptr)
-    {
-        return false;
-    }
-
-    if (output->size < get_output_size(input.size, OPERATION_ENCRYPT))
     {
         return false;
     }
@@ -115,11 +107,8 @@ vector<uint8_t> double_encrypt(const vector<uint8_t>& data, const vector<uint8_t
     auto sq2 = make_square(k2);
     
     vector<uint8_t> filtered = data;
-    bool padded = false;
-    
     if (filtered.size() % 2 != 0) {
         filtered.push_back(0);
-        padded = true;
     }
     
     vector<uint8_t> result;
@@ -130,11 +119,6 @@ vector<uint8_t> double_encrypt(const vector<uint8_t>& data, const vector<uint8_t
         result.push_back(sq1[r1][c2]);
         result.push_back(sq2[r2][c1]);
     }
-    
-    if (padded) {
-        result.push_back(0xFF);
-    }
-    
     return result;
 }
 
@@ -146,20 +130,19 @@ vector<uint8_t> double_decrypt(const vector<uint8_t>& cipher, const vector<uint8
     if (cipher.size() % 2 != 0) {
         return {};
     }
-
+    
     vector<uint8_t> result;
     for (size_t i = 0; i < cipher.size(); i += 2) {
-        int r1, c1, r2, c2;
-
-        find_pos(sq1, cipher[i],     r1, c2);
+        int r1, c2, r2, c1;
+        find_pos(sq1, cipher[i], r1, c2);
         find_pos(sq2, cipher[i + 1], r2, c1);
-
         result.push_back(sq1[r1][c1]);
         result.push_back(sq2[r2][c2]);
     }
-
+    
     return result;
 }
+
 extern "C" int encrypt(ConstBuffer key, ConstBuffer input, MutBuffer* output)
 {
     try
@@ -192,7 +175,7 @@ extern "C" int decrypt(ConstBuffer key, ConstBuffer input, MutBuffer* output)
 {
     try
     {
-        if (!is_buffer_correct(key, input, output))
+        if (!is_buffer_correct(key,input, output))
         {
             return ERROR_CODE;
         }
