@@ -16,17 +16,20 @@ void print_help()
     cout << "Usage:\n";
     cout << "  cryptum --help\n";
     cout << "  cryptum -a <algorithm> -m generate-key -s <key_file>\n";
+    cout << "  cryptum -a <algorithm> -m generate-key -w\n";
     cout << "  cryptum -a <algorithm> -m encrypt -k <key_file> -i <input_file> -o <output_file>\n";
     cout << "  cryptum -a <algorithm> -m encrypt -g -s <key_file> -i <input_file> -o <output_file>\n";
-    cout << "  cryptum -a <algorithm> -m decrypt -k <key_file> -i <input_file> -o <output_file>\n\n";
+    cout << "  cryptum -a <algorithm> -m decrypt -k <key_file> -i <input_file> -o <output_file>\n";
+    cout << "  cat <input_file> | cryptum -a <algorithm> -m encrypt -k <key_file> -o <output_file>\n";
+    cout << "  cryptum -a <algorithm> -m decrypt -k <key_file> -i <input_file> > <output_file>\n\n";
 
     cout << "Options:\n";
     cout << "  -h, --help              Show help\n";
     cout << "  -a, --algorithm         Select encryption algorithm\n";
     cout << "  -m, --mode              Select mode: encrypt, decrypt, generate-key\n";
-    cout << "  -k, --key               Read key from binary file\n";
-    cout << "  -i, --input             Read input data from binary file\n";
-    cout << "  -o, --output            Write result to binary file\n";
+    cout << "  -k, --key               Read key from binary file or stdin with '-'\n";
+    cout << "  -i, --input             Read input data from binary file or stdin with '-'\n";
+    cout << "  -o, --output            Write result to binary file or stdout with '-'\n";
     cout << "  -g, --generate-key      Generate key for encryption\n";
     cout << "  -s, --save-key          Save generated key to binary file\n";
     cout << "  -w, --write-key         Write generated key to standard output\n\n";
@@ -34,6 +37,21 @@ void print_help()
     cout << "Supported algorithms:\n";
     cout << "  caesar       - Caesar cipher\n";
     cout << "  code_word    - code word cipher\n";
+}
+
+bool is_standard_stream_name(const string& file_name)
+{
+    return file_name.empty() || file_name == "-";
+}
+
+bool is_stdin_name(const string& file_name)
+{
+    return file_name == "-";
+}
+
+bool is_stdout_name(const string& file_name)
+{
+    return file_name.empty() || file_name == "-";
 }
 
 int run_generate_key_mode(const ProgramOptions& options, const AlgorithmInfo* algorithm_info)
@@ -68,7 +86,7 @@ int run_generate_key_mode(const ProgramOptions& options, const AlgorithmInfo* al
     }
     else if (options.write_key)
     {
-        if (!write_binary_block(cout, key, error_message))
+        if (!write_binary_stream(cout, key, error_message))
         {
             secure_clear_vector(key);
             cerr << "Error: " << error_message << '\n';
@@ -100,9 +118,19 @@ CryptFunc get_crypt_function(const LoadedAlgorithm& algorithm, const string& mod
     return algorithm.decrypt;
 }
 
-bool are_crypt_files_specified(const ProgramOptions& options)
+bool are_standard_streams_valid(const ProgramOptions& options)
 {
-    return !options.input_file.empty() && !options.output_file.empty();
+    if (is_stdin_name(options.key_file) && is_standard_stream_name(options.input_file))
+    {
+        return false;
+    }
+
+    if (options.generate_key && options.write_key && is_stdout_name(options.output_file))
+    {
+        return false;
+	}
+
+    return true;
 }
 
 bool save_generated_key_if_needed(const ProgramOptions& options, const vector<uint8_t>& key, string& error_message)
@@ -114,10 +142,20 @@ bool save_generated_key_if_needed(const ProgramOptions& options, const vector<ui
 
     if (options.write_key)
     {
-        return write_binary_block(cout, key, error_message);
+        return write_binary_stream(cout, key, error_message);
     }
 
     return true;
+}
+
+vector<uint8_t> read_key_for_crypt_mode(const ProgramOptions& options, string& error_message)
+{
+    if (is_stdin_name(options.key_file))
+    {
+        return read_binary_stream(cin, error_message);
+    }
+
+    return read_binary_file(options.key_file, error_message);
 }
 
 vector<uint8_t> get_key_for_crypt_mode(const ProgramOptions& options, const AlgorithmInfo* algorithm_info, string& error_message)
@@ -131,7 +169,8 @@ vector<uint8_t> get_key_for_crypt_mode(const ProgramOptions& options, const Algo
         }
 
         vector<uint8_t> key = generate_key(algorithm_info->key_size, error_message);
-	if (key.empty())
+
+        if (key.empty())
         {
             return {};
         }
@@ -145,14 +184,43 @@ vector<uint8_t> get_key_for_crypt_mode(const ProgramOptions& options, const Algo
         return key;
     }
 
-    return read_binary_file(options.key_file, error_message);
+    return read_key_for_crypt_mode(options, error_message);
+}
+
+vector<uint8_t> read_input_data(const ProgramOptions& options, string& error_message)
+{
+    if (is_standard_stream_name(options.input_file))
+    {
+        return read_binary_stream(cin, error_message);
+    }
+
+    return read_binary_file(options.input_file, error_message);
+}
+
+bool write_output_data(const ProgramOptions& options, const vector<uint8_t>& output_data, string& error_message)
+{
+    if (is_stdout_name(options.output_file))
+    {
+        return write_binary_stream(cout, output_data, error_message);
+    }
+
+    return write_binary_file(options.output_file, output_data, error_message);
+}
+
+void print_crypt_success(const ProgramOptions& options, const AlgorithmInfo* algorithm_info)
+{
+    ostream& message_stream = is_stdout_name(options.output_file) ? cerr : cout;
+
+    message_stream << "Operation completed successfully.\n";
+    message_stream << "Algorithm: " << algorithm_info->algorithm_name << '\n';
+    message_stream << "Mode: " << options.mode << '\n';
 }
 
 int run_crypt_mode(const ProgramOptions& options, const LoadedAlgorithm& algorithm, const AlgorithmInfo* algorithm_info)
 {
-    if (!are_crypt_files_specified(options))
+    if (!are_standard_streams_valid(options))
     {
-        cerr << "Error: input and output files must be specified\n";
+        cerr << "Error: invalid standard stream usage\n";
         return 1;
     }
 
@@ -173,7 +241,7 @@ int run_crypt_mode(const ProgramOptions& options, const LoadedAlgorithm& algorit
         return 1;
     }
 
-    vector<uint8_t> input_data = read_binary_file(options.input_file, error_message);
+    vector<uint8_t> input_data = read_input_data(options, error_message);
 
     if (!error_message.empty())
     {
@@ -200,12 +268,12 @@ int run_crypt_mode(const ProgramOptions& options, const LoadedAlgorithm& algorit
         secure_clear_vector(input_data);
         secure_clear_vector(output_data);
         cerr << "Error: cryptographic operation failed\n";
-        return 1;
+	return 1;
     }
 
     output_data.resize(output_buffer.size);
 
-    if (!write_binary_file(options.output_file, output_data, error_message))
+    if (!write_output_data(options, output_data, error_message))
     {
         secure_clear_vector(key);
         secure_clear_vector(input_data);
@@ -218,10 +286,7 @@ int run_crypt_mode(const ProgramOptions& options, const LoadedAlgorithm& algorit
     secure_clear_vector(input_data);
     secure_clear_vector(output_data);
 
-    cout << "Operation completed successfully.\n";
-    cout << "Algorithm: " << algorithm_info->algorithm_name << '\n';
-    cout << "Mode: " << options.mode << '\n';
-
+    print_crypt_success(options, algorithm_info);
     return 0;
 }
 
