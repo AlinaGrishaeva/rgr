@@ -106,19 +106,26 @@ vector<uint8_t> double_encrypt(const vector<uint8_t>& data, const vector<uint8_t
     auto sq1 = make_square(k1);
     auto sq2 = make_square(k2);
     
-    vector<uint8_t> filtered = data;
-    if (filtered.size() % 2 != 0) {
-        filtered.push_back(0);
-    }
-    
     vector<uint8_t> result;
-    for (size_t i = 0; i < filtered.size(); i += 2) {
+    result.reserve(data.size());
+
+    size_t i = 0;
+    for (; i + 1 < data.size(); i += 2) {
         int r1, c1, r2, c2;
-        find_pos(sq1, filtered[i], r1, c1);
-        find_pos(sq2, filtered[i + 1], r2, c2);
+        find_pos(sq1, data[i], r1, c1);
+        find_pos(sq2, data[i + 1], r2, c2);
         result.push_back(sq1[r1][c2]);
         result.push_back(sq2[r2][c1]);
     }
+
+    if (i < data.size()) {
+        int r1, c1, r2, c2;
+        find_pos(sq1, data[i], r1, c1);
+        find_pos(sq2, data[i], r2, c2);
+        result.push_back(sq1[r1][c2]);
+        result.push_back(sq2[r2][c1]);
+    }
+
     return result;
 }
 
@@ -132,6 +139,8 @@ vector<uint8_t> double_decrypt(const vector<uint8_t>& cipher, const vector<uint8
     }
     
     vector<uint8_t> result;
+    result.reserve(cipher.size());
+
     for (size_t i = 0; i < cipher.size(); i += 2) {
         int r1, c2, r2, c1;
         find_pos(sq1, cipher[i], r1, c2);
@@ -139,7 +148,7 @@ vector<uint8_t> double_decrypt(const vector<uint8_t>& cipher, const vector<uint8
         result.push_back(sq1[r1][c1]);
         result.push_back(sq2[r2][c2]);
     }
-    
+
     return result;
 }
 
@@ -175,7 +184,7 @@ extern "C" int decrypt(ConstBuffer key, ConstBuffer input, MutBuffer* output)
 {
     try
     {
-        if (!is_buffer_correct(key,input, output))
+        if (!is_buffer_correct(key, input, output))
         {
             return ERROR_CODE;
         }
